@@ -1,5 +1,5 @@
 %File path
-filePath = 'Desktop/csi_log_lr.txt'
+filePath = 'csi_log_stationary.txt';
 %MAC address of edison
 EDISON = '78:4b:87:a0:16:6d';
 %number of subchannels
@@ -7,8 +7,8 @@ nSubChannels = 52;
 
 
 %% Load the data
-% data = importdata(filePath);
-% data = data';
+data = importdata(filePath);
+data = data';
 
 %% Initialize values
 %Channel values matrix: subchannel, h_j, timestep
@@ -53,7 +53,9 @@ for cell = data
         i = i + 1;
         line = strsplit(line,',');
         for ind = 1:max(size(line))
-            h(i,ind) = eval(char(line(ind)));
+            if i > 4 % skip pilots
+                h(i-4,ind) = eval(char(line(ind)));
+            end
         end
         continue;
     end
@@ -61,19 +63,26 @@ for cell = data
     %End of packet: save packet values
     if findstr(line,'</packet>,')
         timestamps = [timestamps timestamp];
+        % hs is 3 dimensional. First dimension is number of subchannels.
+        % Second dimension is number of h_ijs (4). Third dimensions is
+        % number of packets from the Edison.
         hs = cat(3, hs, h);
     end
 end
 
+keyboard;
 timestamps = (timestamps - timestamps(1))/10^3;
 
 %% Plot
 hold('on')
+keyboard;
 
+% Plot the magnitude for each of the packets as a function of the
+% subcarrier.
 for j = [1,3]
     figure
     %Select h_j for subchannel 1 at all timesteps
-    for i = 1:nSubChannels
+    for subc = 1:nSubChannels
         h = squeeze(abs(hs(:,j,:)));
         plot(timestamps,h,'color',rand(1,3))
     end
@@ -81,6 +90,8 @@ for j = [1,3]
     ylabel(['|h_',num2str(j),'|'])
     title(['Left to Right Movement |h_',num2str(j),'| for each subchannel']);
 end
+
+keyboard;
 
 figure
 %Select h_j for subchannel 1 at all timesteps
