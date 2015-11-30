@@ -1,0 +1,17 @@
+x = load('h_t_mac.mat');
+h = x.h;
+t = x.t;
+mac = x.mac;
+
+hs = [];
+times = [];
+for i = 1:size(mac)
+    if strcmp(mac(i), ' 78:4b:87:a2:b7:57')
+        hs = [hs; h(i,1), h(i,2)];
+        times = [times; t(i)];
+    end
+end
+
+for i = 1:266
+    plot(abs(hs(i,:)));
+end

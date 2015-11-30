@@ -1,7 +1,7 @@
 %File path
-filePath = 'csi_log_stationary.txt';
+filePath = 'csi_log_for_angle.txt';
 %MAC address of edison
-EDISON = '78:4b:87:a0:16:6d';
+EDISON = '78:4b:87:a2:b7:57';
 %number of subchannels
 nSubChannels = 52;
 
@@ -70,12 +70,13 @@ for cell = data
     end
 end
 
-keyboard;
 timestamps = (timestamps - timestamps(1))/10^3;
+
+save('veronica_parse','hs','timestamps');
+keyboard;
 
 %% Plot
 hold('on')
-keyboard;
 
 % Plot the magnitude for each of the packets as a function of the
 % subcarrier.

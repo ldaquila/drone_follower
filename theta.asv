@@ -1,0 +1,9 @@
+f = 5.2 * 10^12;
+c = 299792458;
+D = 0.2032;
+delta_phi = -1.1254;
+
+theta_radians = acos((c/f) * delta_phi / (2 * pi * D));
+theta_degrees = theta_radians * 57.2958;
+
+theta_radians = acos((c/f) * delta_phi / (2 * pi * D));
