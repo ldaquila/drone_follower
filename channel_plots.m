@@ -1,4 +1,7 @@
+% Use this file to compute plots
 close all;
+
+subcarriers = [-26:-1 1:26];
 
 x = load('lab3_process_separate.mat');
 
@@ -7,9 +10,11 @@ x = load('lab3_process_separate.mat');
 ordered_H_packet1 = orderSubcarriers(x.csi_filtered{1}.H);
 ordered_H_packet2 = orderSubcarriers(x.csi_filtered{2}.H);
 
+% Get the channels for the first packet
 H21_1 = ordered_H_packet1(:,3);
 H11_1 = ordered_H_packet1(:,1);
 
+% Get the channels for the second packet
 H21_2 = ordered_H_packet2(:,3);
 H11_2 = ordered_H_packet2(:,1);
 
@@ -17,12 +22,15 @@ figure;
 plot(angle(H11_1));
 hold on;
 plot(angle(H21_1));
+title('Angle of two channels for the first packet');
 
 figure;
 plot(unwrap(angle(H11_1)));
+title('Unwrapped angle of first channel for the first packet');
 
 figure;
 plot(angle(H11_1./H21_1));
+title('Angle of ratio of two channels for the first packet');
 
 % The fact that the are similar between packets shows that these differences are due to
 % noise and not multipath between the two packets. However, the angle should be
@@ -30,15 +38,17 @@ plot(angle(H11_1./H21_1));
 % effects taking place (which is why we were seeing that some subcarriers
 % were getting better results than others).
 figure;
-plot(angle(H21_1./H2_1));
+plot(angle(H21_1./H11_1));
 hold on;
-plot(angle(H21_0./H2_0));
+plot(angle(H21_2./H11_2));
+title('Angle of ratio of two channels for the first two packets');
 
 
 y = load('our_process_separate.mat');
 f = 5.2 * 10^9;
 c = 299792458;
 D = .22;
+measured_theta = 12.88; % The theta that was physically measured
 
 figure;
 theta_degrees = zeros(1,52);
@@ -56,10 +66,9 @@ end
 
 theta_degrees = abs(theta_degrees);
 figure;
-plot(theta_degrees,'*');
+plot(subcarriers,theta_degrees,'*');
 hold on;
-plot(ones(1,52)*12.88);
+plot(subcarriers,ones(1,52)*measured_theta);
+title('Computed theta vs theoretical theta');
+% Print the mean of the theta measured from each of the subcarriers
 mean(theta_degrees)
-
-% suggesting subtracting across consecutive packets to reduce multipath
-% effects

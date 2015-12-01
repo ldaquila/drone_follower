@@ -1,0 +1,20 @@
+% data_processing.m only needs to be run once (whenever a new text file is
+% collected). Fill in the below fields before running
+data_file = 'csi_log_left_run2.txt'; % The name of the text file
+MAC = '78:4b:87:a2:b7:57'; % The MAC address of the src we are concerned about. Keep it lowercase.
+
+% process_channels_lab3 is the code that was given for us to use during
+% lab3. Running this function will produce two .mat files (not t):
+% 'lab3_process_separate.mat': contains information about H for individual
+% subcarriers (so each packet will have 56 rows) for the given MAC address
+% 'lab3_process_combined.mat': contains information about h combined across
+% each of the subcarriers (so each packet will have 1 row) for the given
+% MAC address
+process_channels_lab3(data_file,MAC);
+
+% process_channels is the code that Veronica wrote to parse the text file
+% and obtain the channel measurements for the given MAC address
+% Running this function will produce one .mat file:
+% 'our_process_separate.mat': contains information about h for individual
+% subcarriers (so each packet will have 56 rows)
+process_channels(data_file,MAC);
