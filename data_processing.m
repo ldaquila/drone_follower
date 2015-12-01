@@ -6,7 +6,7 @@
 % 'our_process_separate.mat'
 
 % Arguments:
-% data_file (e.g. 'csi_log_left_run2.txt'): The name of the text file
+% data_file (e.g. 'csi_logs/csi_log_left_run2.txt'): The name of the text file
 % MAC (e.g. '78:4b:87:a2:b7:57'): The MAC address of the src we are concerned about. Keep it lowercase.
 function data_processing(data_file, MAC)
 % process_channels_lab3 is the code that was given for us to use during

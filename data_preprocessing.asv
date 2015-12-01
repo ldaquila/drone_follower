@@ -1,5 +1,0 @@
-%
-data_file = '';
-process_channels_lab3(data_file);
-process_channels(data_file);
-parsing();
