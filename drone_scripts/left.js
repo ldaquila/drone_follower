@@ -23,34 +23,13 @@ d.connect(function () {
           d.flatTrim();
         }
       },
-/*      {
-        delay: 4500,
-        task: function () {
-          console.log('Going up');
-          d.up({steps: 20});
-        }
-      },*/
       {
         delay: 4500,
         task: function () {
           console.log('Going left');
-          d.tiltLeft({steps: 6, speed: 100});
+          d.tiltLeft({steps: 20, speed: 100});
         }
       },
-/*      {
-        delay: 4500,
-        task: function () {
-          console.log('Going right');
-          d.tiltRight({steps: 12, speed: 100});
-        }
-      }, */
-      /*{
-        delay: 4500,
-        task: function () {
-          console.log('Going down');
-          d.down({steps: 20});
-        }
-      },*/
       {
         delay: 5000,
         task: function () {
