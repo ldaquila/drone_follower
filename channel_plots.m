@@ -18,6 +18,15 @@ H11_1 = ordered_H_packet1(:,1);
 H21_2 = ordered_H_packet2(:,3);
 H11_2 = ordered_H_packet2(:,1);
 
+% Plot the magnitude. Should be a bell curve without multipath
+figure;
+plot(abs(H11_1));
+hold on;
+plot(abs(H21_1));
+plot(abs(H11_2));
+plot(abs(H21_2));
+legend('H11_1','H21_1','H11_2','H21_2');
+
 figure;
 plot(angle(H11_1));
 hold on;
@@ -72,3 +81,24 @@ plot(subcarriers,ones(1,52)*measured_theta);
 title('Computed theta vs theoretical theta');
 % Print the mean of the theta measured from each of the subcarriers
 mean(theta_degrees)
+
+
+% Integration: Compute delta theta
+h_size = size(y.hs);
+total_theta = 0;
+delta_thetas = zeros(1,h_size(3));
+
+for packet = 1:h_size(3)-1 % Iterate through all the packets and compare to the next successive one
+    theta_degrees = zeros(1,52);
+    for subc = 1:52
+        h=unwrap(angle(y.hs(subc,1,packet:packet+1) ./ y.hs(subc,3,packet:packet+1)));
+        theta_radians1 = acos((c/f) * h(1) / (2 * pi * D));
+        theta_radians2 = acos((c/f) * h(2) / (2 * pi * D));
+        theta_degrees(subc) = (theta_radians2 - theta_radians1) * 57.2958;
+    end
+    delta_thetas(packet) = mean(abs(theta_degrees));
+    total_theta = total_theta + mean(abs(theta_degrees));
+end
+total_theta
+figure;
+plot(delta_thetas);
