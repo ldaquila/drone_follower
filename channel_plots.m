@@ -1,7 +1,14 @@
 % Use this file to compute plots
 close all;
 
-dataset = '1';
+measured_theta = 15; %12.88; % The theta that was physically measured
+dataset = '6';
+% dataset 1 = csi_log_left.txt angle = 12.88
+% dataset 2 = csi_log_dec2-1.txt angle = 10
+% dataset 3 = csi_log_45_degrees.txt angle = 45
+% dataset 4 = csi_log_45_degrees_again.txt angle = 45
+% dataset 5 = csi_log_45_degrees_third.txt angle = 45
+% dataset 6 = csi_log_45to60degrees.txt angle = 15 
 subcarriers = [-26:-1 1:26];
 
 x = load('lab3_process_separate.mat');
@@ -49,7 +56,7 @@ y = load('our_process_separate.mat');
 f = 5.2 * 10^9;
 c = 299792458;
 D = .22;
-measured_theta = 12.88; % The theta that was physically measured
+
 
 figure;
 theta_degrees = zeros(1,52);
