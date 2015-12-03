@@ -1,6 +1,7 @@
 % Use this file to compute plots
 close all;
 
+dataset = '1';
 subcarriers = [-26:-1 1:26];
 
 x = load('lab3_process_separate.mat');
@@ -55,13 +56,17 @@ theta_degrees = zeros(1,52);
 for subc = 1:52
     h=unwrap(angle(y.hs(subc,1,:) ./ y.hs(subc,3,:)));
     h = h(:);
-    plot(y.timestamps,h);
+    plot(h); % to do time do y.timestamps , h
     first_h = mean(h(1:15));
     last_h = mean(h(end-14:end));
     theta_radians1 = acos((c/f) * first_h / (2 * pi * D));
     theta_radians2 = acos((c/f) * last_h / (2 * pi * D));
     theta_degrees(subc) = (theta_radians2 - theta_radians1) * 57.2958;
     hold on;
+    title(['Angle of Channel Measurement Ratio for Data Set ' dataset]);
+    xlabel('Packet');
+    ylabel('Angle of Channel Measurement Ratio');
+    legend('Each line represents a different subcarrier');
 end
 
 theta_degrees = abs(theta_degrees);
@@ -69,6 +74,9 @@ figure;
 plot(subcarriers,theta_degrees,'*');
 hold on;
 plot(subcarriers,ones(1,52)*measured_theta);
-title('Computed theta vs theoretical theta');
+title(['Theta Across Subcarriers for Data Set ' dataset]);
+xlabel('Subcarrier');
+ylabel('Angle in Degrees');
+legend('Computed Theta', 'Theoretical Theta');
 % Print the mean of the theta measured from each of the subcarriers
 mean(theta_degrees)
