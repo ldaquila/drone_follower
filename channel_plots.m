@@ -1,8 +1,8 @@
 % Use this file to compute plots
 close all;
 
-measured_theta = 15; %12.88; % The theta that was physically measured
-dataset = '6';
+measured_theta = 12.88; % The theta that was physically measured
+dataset = '5';
 % dataset 1 = csi_log_left.txt angle = 12.88
 % dataset 2 = csi_log_dec2-1.txt angle = 10
 % dataset 3 = csi_log_45_degrees.txt angle = 45
@@ -34,6 +34,7 @@ plot(abs(H21_1));
 plot(abs(H11_2));
 plot(abs(H21_2));
 legend('H11_1','H21_1','H11_2','H21_2');
+title('magnitude for first two packets');
 
 figure;
 plot(angle(H11_1));
@@ -110,9 +111,81 @@ for packet = 1:h_size(3)-1 % Iterate through all the packets and compare to the 
         theta_radians2 = acos((c/f) * h(2) / (2 * pi * D));
         theta_degrees(subc) = (theta_radians2 - theta_radians1) * 57.2958;
     end
-    delta_thetas(packet) = mean(abs(theta_degrees));
-    total_theta = total_theta + mean(abs(theta_degrees));
+    delta_thetas(packet) = mean(theta_degrees);
+    total_theta = total_theta + mean(theta_degrees);
 end
 total_theta
 figure;
 plot(delta_thetas);
+title(['Per-Packet Delta Theta for Data Set ' dataset]);
+xlabel('Packet');
+ylabel('Mean Delta Theta across Subcarriers(Degrees)');
+
+
+% Compute resolution  
+h_size = size(y.hs);
+nSubcarriers = 52;
+thetas = zeros(nSubcarriers,h_size(3));
+maxTheta = 0;
+minTheta = 360;
+
+for packet = 1:h_size(3) % Iterate through all the packets 
+    theta_degrees = zeros(1,nSubcarriers);
+    for subc = 1:nSubcarriers
+        h=angle(y.hs(subc,1,packet) ./ y.hs(subc,3,packet)); 
+        % Laura had an unwrap here ^ but it doesn't seem to make a difference
+        theta_radians1 = acos((c/f) * h(1) / (2 * pi * D));
+        theta_degrees(subc) = theta_radians1 * 57.2958;
+        thetas(subc, packet) = theta_degrees(subc);
+        if theta_degrees(subc) < minTheta
+            minTheta = theta_degrees(subc);
+        end
+        if theta_degrees(subc) > maxTheta
+            maxTheta = theta_degrees(subc);
+        end
+    end
+end
+
+figure;
+for subc = 1:nSubcarriers
+    plot(thetas(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    hold on;
+end
+resolution = maxTheta - minTheta % in degrees
+title(['Per-Packet Theta for Data Set ' dataset]);
+xlabel('Packet');
+ylabel('Theta (Degrees)');
+legend('Each line represents a subcarrier');
+
+
+
+% Colleen's attempt to unwrap using the resolution
+% Integration: Compute delta theta
+h_size = size(y.hs);
+nSubcarriers = 52;
+total_theta = zeros(1,nSubcarriers);
+delta_thetas = zeros(nSubcarriers,h_size(3));
+for packet = 1:h_size(3)-1 % Iterate through all the packets and compare to the next successive one
+    theta_degrees = zeros(1,52);
+    for subc = 1:nSubcarriers
+        h=angle(y.hs(subc,1,packet:packet+1) ./ y.hs(subc,3,packet:packet+1));
+        theta_radians1 = acos((c/f) * h(1) / (2 * pi * D));
+        theta_radians2 = acos((c/f) * h(2) / (2 * pi * D));
+        theta_degrees(subc) = (theta_radians2 - theta_radians1) * 57.2958;
+        delta_thetas(subc, packet) = theta_degrees(subc);
+    end
+end
+
+for subc = 1:nSubcarriers
+    total_theta(subc) = sum(delta_thetas(subc, :));
+end
+%total_theta
+figure;
+for subc = 1:nSubcarriers
+    plot(delta_thetas(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    hold on;
+end
+title(['Per-Packet Delta Theta for Data Set ' dataset]);
+xlabel('Packet');
+ylabel('Delta Theta (Degrees)');
+legend('Each line represents a subcarrier');

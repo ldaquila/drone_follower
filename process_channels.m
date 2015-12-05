@@ -1,11 +1,7 @@
 function process_channels(filePath, MAC)
-    %File path
-    % filePath = 'csi_log_for_angle.txt';
-    %MAC address of edison
-    % EDISON = '78:4b:87:a2:b7:57';
+    MODE = '0x140';
     %number of subchannels
     nSubChannels = 52;
-
 
     %% Load the data
     data = importdata(filePath);
@@ -41,9 +37,20 @@ function process_channels(filePath, MAC)
         if findstr(line,'<source>')
             pattern = '([0-9A-Fa-f]{1,2}[:]){5}([0-9A-Fa-f]{1,2})';
             source = char(regexpi(line, pattern, 'match'));
+            % whether or not to process this packet
             processPacket = strcmp(source,MAC);
+            continue;
+        end
+        
+        %Check mode
+        if findstr(line, '<mode>')
+            pattern = '0x[0-9]*';
+            mode_ = char(regexpi(line, pattern, 'match'));
+            %whether or not to process this packet
+            processPacket = strcmp(mode_, MODE);
             if processPacket
-                h = zeros(nSubChannels,4); 
+                %initialize h
+                h = zeros(nSubChannels,4);
                 i = 0;
             end
             continue;
@@ -71,7 +78,7 @@ function process_channels(filePath, MAC)
         end
     end
 
-    timestamps = (timestamps - timestamps(1))/10^3;
+%     timestamps = (timestamps - timestamps(1))/10^3;
 
     save('our_process_separate','hs','timestamps');
 
