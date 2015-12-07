@@ -180,33 +180,40 @@ end
 % attempt to do our own unwrap
 countunder = 0;
 threshold = 10;
+subcs_packets_todrop = zeros(size(thetas)); % put a 1 in if we want to drop that entry
 for packet = 2:h_size(3)-2 % Iterate through all the packets and compare to the next successive one
     for subc = 1:nSubcarriers
         if all_delta_thetas(subc, packet) > threshold 
             % see if this is a trend or just one weird packet
             previous_packet_theta = thetas(subc, packet-1);
-            next_packet_theta = thetas(subc, packet+1)
-            delta = next_packet_theta - previous_packet_theta
+            next_packet_theta = thetas(subc, packet+1);
+            delta = next_packet_theta - previous_packet_theta;
             if delta > resolution % this is a trend, unwrap
                 thetas(subc, packet) = thetas(subc, packet) - resolution;
             else % one weird packet, drop it
-                %TODO remove this subc, packet entry from thetas
+                %remove this subc, packet entry from thetas
+                subcs_packets_todrop(subc, packet) = 1;
             end
         end
         if all_delta_thetas(subc, packet) < -threshold
             % see if this is a trend or just one weird packet
             previous_packet_theta = thetas(subc, packet-1);
-            next_packet_theta = thetas(subc, packet+1)
-            delta = next_packet_theta - previous_packet_theta
+            next_packet_theta = thetas(subc, packet+1);
+            delta = next_packet_theta - previous_packet_theta;
             if delta < -resolution % this is a trend, unwrap
                 thetas(subc, packet) = thetas(subc, packet) + resolution;
             else % one weird packet, drop
-                %TODO remove this subc, packet entry from thetas
+                %remove this subc, packet entry from thetas
+                subcs_packets_todrop(subc, packet) = 1;
             end
         end
     end 
 end
-countunder
+%TODO remove entries in thetas corresponding to 1's in %subcs_packets_todrop
+
+
+
+
 %total_theta
 figure;
 for subc = 1:nSubcarriers
