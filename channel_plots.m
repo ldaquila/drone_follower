@@ -163,7 +163,7 @@ legend('Each line represents a subcarrier');
 % Colleen's attempt to unwrap using the resolution
 % Integration: Compute delta theta
 h_size = size(y.hs);
-nSubcarriers = 52;
+nSubcarriers = 5;
 total_theta = zeros(1,nSubcarriers);
 all_delta_thetas = zeros(nSubcarriers,h_size(3)-1);
 
@@ -177,6 +177,7 @@ for packet = 1:h_size(3)-1 % Iterate through all the packets and compare to the 
     end
 end
 
+% attempt to do our own unwrap
 countunder = 0;
 threshold = 10;
 for packet = 2:h_size(3)-2 % Iterate through all the packets and compare to the next successive one
@@ -184,7 +185,7 @@ for packet = 2:h_size(3)-2 % Iterate through all the packets and compare to the 
         if all_delta_thetas(subc, packet) > threshold
             thetas(subc, packet) = thetas(subc, packet) - resolution;
         end
-        if all_delta_thetas(subc) < -threshold
+        if all_delta_thetas(subc, packet) < -threshold
             countunder = countunder +1;
             thetas(subc, packet) = thetas(subc, packet) + resolution;
         end
@@ -198,7 +199,7 @@ for subc = 1:nSubcarriers
     plot(all_delta_thetas(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
     hold on;
 end
-total_theta
+
 title(['Corrected? Per-Packet Delta Theta for Data Set ' dataset]);
 xlabel('Packet');
 ylabel('Delta Theta (Degrees)');
@@ -206,10 +207,10 @@ legend('Each line represents a subcarrier');
 
 figure;
 for subc = 1:nSubcarriers
-    plot(theta_degrees(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    plot(thetas(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
     hold on;
 end
-total_theta
+
 title(['Corrected? Per-Packet Per Subcarrier Theta for Data Set ' dataset]);
 xlabel('Packet');
 ylabel('Theta (Degrees)');
