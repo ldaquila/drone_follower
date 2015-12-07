@@ -182,12 +182,27 @@ countunder = 0;
 threshold = 10;
 for packet = 2:h_size(3)-2 % Iterate through all the packets and compare to the next successive one
     for subc = 1:nSubcarriers
-        if all_delta_thetas(subc, packet) > threshold
-            thetas(subc, packet) = thetas(subc, packet) - resolution;
+        if all_delta_thetas(subc, packet) > threshold 
+            % see if this is a trend or just one weird packet
+            previous_packet_theta = thetas(subc, packet-1);
+            next_packet_theta = thetas(subc, packet+1)
+            delta = next_packet_theta - previous_packet_theta
+            if delta > resolution % this is a trend, unwrap
+                thetas(subc, packet) = thetas(subc, packet) - resolution;
+            else % one weird packet, drop it
+                %TODO remove this subc, packet entry from thetas
+            end
         end
         if all_delta_thetas(subc, packet) < -threshold
-            countunder = countunder +1;
-            thetas(subc, packet) = thetas(subc, packet) + resolution;
+            % see if this is a trend or just one weird packet
+            previous_packet_theta = thetas(subc, packet-1);
+            next_packet_theta = thetas(subc, packet+1)
+            delta = next_packet_theta - previous_packet_theta
+            if delta < -resolution % this is a trend, unwrap
+                thetas(subc, packet) = thetas(subc, packet) + resolution;
+            else % one weird packet, drop
+                %TODO remove this subc, packet entry from thetas
+            end
         end
     end 
 end
