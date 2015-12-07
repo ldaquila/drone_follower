@@ -133,18 +133,16 @@ maxTheta = 0;
 minTheta = 360;
 
 for packet = 1:h_size(3) % Iterate through all the packets 
-    theta_degrees = zeros(1,nSubcarriers);
     for subc = 1:nSubcarriers
         h=angle(y.hs(subc,1,packet) ./ y.hs(subc,3,packet)); 
         % Laura had an unwrap here ^ but it doesn't seem to make a difference
         theta_radians1 = acos((c/f) * h(1) / (2 * pi * D));
-        theta_degrees(subc) = theta_radians1 * 57.2958;
-        thetas(subc, packet) = theta_degrees(subc);
-        if theta_degrees(subc) < minTheta
-            minTheta = theta_degrees(subc);
+        thetas(subc, packet) = theta_radians1 * 57.2958;
+        if thetas(subc, packet) < minTheta
+            minTheta = thetas(subc, packet);
         end
-        if theta_degrees(subc) > maxTheta
-            maxTheta = theta_degrees(subc);
+        if thetas(subc, packet) > maxTheta
+            maxTheta = thetas(subc, packet);
         end
     end
 end
@@ -167,39 +165,52 @@ legend('Each line represents a subcarrier');
 h_size = size(y.hs);
 nSubcarriers = 52;
 total_theta = zeros(1,nSubcarriers);
-delta_thetas = zeros(nSubcarriers,h_size(3)-1);
+all_delta_thetas = zeros(nSubcarriers,h_size(3)-1);
+
 
 for packet = 1:h_size(3)-1 % Iterate through all the packets and compare to the next successive one
-    theta_degrees = zeros(1,52);
     for subc = 1:nSubcarriers
         h=angle(y.hs(subc,1,packet:packet+1) ./ y.hs(subc,3,packet:packet+1));
         theta_radians1 = acos((c/f) * h(1) / (2 * pi * D));
         theta_radians2 = acos((c/f) * h(2) / (2 * pi * D));
-        theta_degrees(subc) = (theta_radians2 - theta_radians1) * 57.2958;
-        delta_thetas(subc, packet) = theta_degrees(subc, packet);
+        all_delta_thetas(subc, packet) = (theta_radians2 - theta_radians1) * 57.2958;
     end
 end
 
+countunder = 0;
 threshold = 10;
 for packet = 2:h_size(3)-2 % Iterate through all the packets and compare to the next successive one
     for subc = 1:nSubcarriers
-        if delta_thetas(subc, packet) > threshold
-            theta_degrees(subc, packet) = theta_degrees(subc, packet) - resolution
+        if all_delta_thetas(subc, packet) > threshold
+            thetas(subc, packet) = thetas(subc, packet) - resolution;
         end
-        if theta_degrees(subc) < -threshold
-            theta_degrees(subc, packet) = theta_degrees(subc, packet) + resolution
+        if all_delta_thetas(subc) < -threshold
+            countunder = countunder +1;
+            thetas(subc, packet) = thetas(subc, packet) + resolution;
         end
     end 
 end
+countunder
 %total_theta
 figure;
 for subc = 1:nSubcarriers
-    total_theta(subc) = sum(delta_thetas(subc, :));
-    plot(delta_thetas(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    total_theta(subc) = sum(all_delta_thetas(subc, :));
+    plot(all_delta_thetas(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
     hold on;
 end
 total_theta
 title(['Corrected? Per-Packet Delta Theta for Data Set ' dataset]);
 xlabel('Packet');
 ylabel('Delta Theta (Degrees)');
+legend('Each line represents a subcarrier');
+
+figure;
+for subc = 1:nSubcarriers
+    plot(theta_degrees(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    hold on;
+end
+total_theta
+title(['Corrected? Per-Packet Per Subcarrier Theta for Data Set ' dataset]);
+xlabel('Packet');
+ylabel('Theta (Degrees)');
 legend('Each line represents a subcarrier');
