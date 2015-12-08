@@ -12,7 +12,10 @@ dataset = '5';
 % dataset 7 = csi_log_dec6_left1.txt angle = 32
 % dataset 8 = csi_log_dec6_left2.txt angle = 39
 % dataset 9 = csi_log_dec6_left3.txt angle = 41
-subcarriers = [-26:-1 1:26];
+
+nSubcarriers = 52;
+
+subcarriers = [-26:-1 1:26]; % subcarrier scale on x-axis
 
 x = load('lab3_process_separate.mat');
 
@@ -31,13 +34,15 @@ H11_2 = ordered_H_packet2(:,1);
 
 % Plot the magnitude. Should be a bell curve without multipath
 figure;
-plot(abs(H11_1));
+plot(subcarriers, abs(H11_1));
 hold on;
-plot(abs(H21_1));
-plot(abs(H11_2));
-plot(abs(H21_2));
+plot(subcarriers, abs(H21_1));
+plot(subcarriers, abs(H11_2));
+plot(subcarriers, abs(H21_2));
 legend('H11_1','H21_1','H11_2','H21_2');
 title('magnitude for first two packets');
+xlabel('Subcarrier');
+ylabel('Magnitude');
 
 figure;
 plot(angle(H11_1));
@@ -63,7 +68,7 @@ plot(angle(H21_1./H11_1));
 hold on;
 plot(angle(H21_2./H11_2));
 title('Angle of ratio of two channels for the first two packets');
-
+y.timestamps = y.timestamps - y.timestamps(1);
 
 y = load('our_process_separate.mat');
 f = 5.2 * 10^9;
@@ -71,16 +76,17 @@ c = 299792458;
 D = .22;
 
 figure;
-theta_degrees = zeros(1,52);
+theta_degrees = zeros(1,52); 
+% ^difference between the average of first 15 and average of last 15 packets by subcarrier
 h_size = size(y.hs);
 nPackets = h_size(3);
-thetas = zeros(nSubcarriers,nPackets);
+thetas = zeros(nSubcarriers,nPackets); % actual value of theta for every packet and every subcarrier
 for subc = 1:nSubcarriers
-    h=unwrap(angle(y.hs(subc,1,:) ./ y.hs(subc,3,:)));
+    h=unwrap(angle(y.hs(subc,1,:) ./ y.hs(subc,3,:))); % phase change
     theta_radians = acos((c/f) * h / (2 * pi * D));
-    thetas(subc,:) = squeeze(theta_radians)*57;
+    thetas(subc,:) = squeeze(theta_radians)*57.2958;
     h = h(:);
-    plot(h); % to do time do ymps , h
+    plot(y.timestamps, h); % to do time do y.timestamps , h
     first_h = mean(h(1:15));
     last_h = mean(h(end-14:end));
     theta_radians1 = acos((c/f) * first_h / (2 * pi * D));
@@ -88,7 +94,7 @@ for subc = 1:nSubcarriers
     theta_degrees(subc) = (theta_radians2 - theta_radians1) * 57.2958;
     hold on;
     title(['Angle of Channel Measurement Ratio for Data Set ' dataset]);
-    xlabel('Packet');
+    xlabel('Time');
     ylabel('Angle of Channel Measurement Ratio');
     legend('Each line represents a different subcarrier');
 end
@@ -102,25 +108,28 @@ xlabel('Time');
 ylabel('Theta');
 
 integrated_delta_theta = 0;
-thetas = abs(thetas);
+thetas = real(thetas); %get rid of weird small imaginary part
 delta_theta = zeros(nSubcarriers,nPackets-1);
 for packet = 1:nPackets-1
     for subc = 1:nSubcarriers
         delta_theta(subc,packet) = thetas(subc,packet+1) - thetas(subc,packet);
-        % packet_delta_theta = packet_delta_theta + (thetas(subc,packet+1) - thetas(subc,packet));
-        %packet_delta_theta + (thetas(subc,packet+1) - thetas(subc,packet))
     end
-    % integrated_delta_theta = integrated_delta_theta + packet_delta_theta / nPackets;
 end
-answers = zeros(1,nSubcarriers);
+
+integrated_theta = zeros(1,nSubcarriers);
 for subc = 1:nSubcarriers
-    answers(subc) = sum(delta_theta(subc,:));
+    integrated_theta(subc) = sum(delta_theta(subc,:));
 end
 figure;
-plot(answers);
+plot(subcarriers, integrated_theta);
 hold on;
-plot(ones(size(answers))*12.88);
-mean(answers)
+plot(ones(size(integrated_theta))*measured_theta);
+mean(integrated_theta)
+title('Integrated Theta');
+xlabel('Subcarrier');
+ylabel('Theta (Degrees)');
+
+
 
 theta_degrees = abs(theta_degrees);
 figure;
@@ -136,6 +145,7 @@ mean(theta_degrees)
 
 % Integration: Compute delta theta
 h_size = size(y.hs);
+% y.hs subcarriers, channels, packets
 total_theta = 0;
 delta_thetas = zeros(1,h_size(3));
 
@@ -159,7 +169,6 @@ delta_thetas = zeros(1,h_size(3));
 
 
 % Compute resolution  
-h_size = size(y.hs);
 nSubcarriers = 52;
 thetas = zeros(nSubcarriers,h_size(3));
 maxTheta = 0;
@@ -190,7 +199,6 @@ title(['Per-Packet Theta for Data Set ' dataset]);
 xlabel('Packet');
 ylabel('Theta (Degrees)');
 legend('Each line represents a subcarrier');
-keyboard;
 
 %get phase
 phase = squeeze(angle(y.hs(:,1,:) ./ y.hs(:,3,:)));
