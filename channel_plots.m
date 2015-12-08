@@ -72,10 +72,15 @@ D = .22;
 
 figure;
 theta_degrees = zeros(1,52);
-for subc = 1:52
+h_size = size(y.hs);
+nPackets = h_size(3);
+thetas = zeros(nSubcarriers,nPackets);
+for subc = 1:nSubcarriers
     h=unwrap(angle(y.hs(subc,1,:) ./ y.hs(subc,3,:)));
+    theta_radians = acos((c/f) * h / (2 * pi * D));
+    thetas(subc,:) = squeeze(theta_radians)*57;
     h = h(:);
-    plot(h); % to do time do y.timestamps , h
+    plot(h); % to do time do ymps , h
     first_h = mean(h(1:15));
     last_h = mean(h(end-14:end));
     theta_radians1 = acos((c/f) * first_h / (2 * pi * D));
@@ -87,6 +92,35 @@ for subc = 1:52
     ylabel('Angle of Channel Measurement Ratio');
     legend('Each line represents a different subcarrier');
 end
+figure;
+for subc = 1:nSubcarriers
+    plot(y.timestamps, thetas(subc,:));
+    hold on;
+end
+title('Theta As a Function of Time')
+xlabel('Time');
+ylabel('Theta');
+
+integrated_delta_theta = 0;
+thetas = abs(thetas);
+delta_theta = zeros(nSubcarriers,nPackets-1);
+for packet = 1:nPackets-1
+    for subc = 1:nSubcarriers
+        delta_theta(subc,packet) = thetas(subc,packet+1) - thetas(subc,packet);
+        % packet_delta_theta = packet_delta_theta + (thetas(subc,packet+1) - thetas(subc,packet));
+        %packet_delta_theta + (thetas(subc,packet+1) - thetas(subc,packet))
+    end
+    % integrated_delta_theta = integrated_delta_theta + packet_delta_theta / nPackets;
+end
+answers = zeros(1,nSubcarriers);
+for subc = 1:nSubcarriers
+    answers(subc) = sum(delta_theta(subc,:));
+end
+figure;
+plot(answers);
+hold on;
+plot(ones(size(answers))*12.88);
+mean(answers)
 
 theta_degrees = abs(theta_degrees);
 figure;
@@ -105,23 +139,23 @@ h_size = size(y.hs);
 total_theta = 0;
 delta_thetas = zeros(1,h_size(3));
 
-for packet = 1:h_size(3)-1 % Iterate through all the packets and compare to the next successive one
-    theta_degrees = zeros(1,52);
-    for subc = 1:52
-        h=unwrap(angle(y.hs(subc,1,packet:packet+1) ./ y.hs(subc,3,packet:packet+1)));
-        theta_radians1 = acos((c/f) * h(1) / (2 * pi * D));
-        theta_radians2 = acos((c/f) * h(2) / (2 * pi * D));
-        theta_degrees(subc) = (theta_radians2 - theta_radians1) * 57.2958;
-    end
-    delta_thetas(packet) = mean(theta_degrees);
-    total_theta = total_theta + mean(theta_degrees);
-end
-total_theta
-figure;
-plot(delta_thetas);
-title(['Per-Packet Delta Theta for Data Set ' dataset]);
-xlabel('Packet');
-ylabel('Mean Delta Theta across Subcarriers(Degrees)');
+% for packet = 1:h_size(3)-1 % Iterate through all the packets and compare to the next successive one
+%     theta_degrees = zeros(1,52);
+%     for subc = 1:52
+%         h=unwrap(angle(y.hs(subc,1,packet:packet+1) ./ y.hs(subc,3,packet:packet+1)));
+%         theta_radians1 = acos((c/f) * h(1) / (2 * pi * D));
+%         theta_radians2 = acos((c/f) * h(2) / (2 * pi * D));
+%         theta_degrees(subc) = (theta_radians2 - theta_radians1) * 57.2958;
+%     end
+%     delta_thetas(packet) = mean(theta_degrees);
+%     total_theta = total_theta + mean(theta_degrees);
+% end
+% total_theta
+% figure;
+% plot(delta_thetas);
+% title(['Per-Packet Delta Theta for Data Set ' dataset]);
+% xlabel('Packet');
+% ylabel('Mean Delta Theta across Subcarriers(Degrees)');
 
 
 % Compute resolution  
@@ -133,9 +167,9 @@ minTheta = 360;
 
 for packet = 1:h_size(3) % Iterate through all the packets 
     for subc = 1:nSubcarriers
-        h=angle(y.hs(subc,1,packet) ./ y.hs(subc,3,packet)); 
+        h=unwrap(angle(y.hs(subc,1,packet) ./ y.hs(subc,3,packet))); 
         % Laura had an unwrap here ^ but it doesn't seem to make a difference
-        theta_radians1 = acos((c/f) * h(1) / (2 * pi * D));
+        theta_radians1 = acos((c/f) * h / (2 * pi * D));
         thetas(subc, packet) = theta_radians1 * 57.2958;
         if thetas(subc, packet) < minTheta
             minTheta = thetas(subc, packet);
@@ -156,8 +190,7 @@ title(['Per-Packet Theta for Data Set ' dataset]);
 xlabel('Packet');
 ylabel('Theta (Degrees)');
 legend('Each line represents a subcarrier');
-
-
+keyboard;
 
 %get phase
 phase = squeeze(angle(y.hs(:,1,:) ./ y.hs(:,3,:)));
