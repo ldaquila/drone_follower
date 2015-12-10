@@ -1,9 +1,9 @@
 % Use this file to compute plots
 close all;
 
-measured_theta = 125; % The theta that was physically measured
-dataset = '5';
-start_angle_degrees = 120;
+measured_theta = 55; % The theta that was physically measured
+dataset = '14';
+start_angle_degrees = 85;
 % dataset 1 = csi_log_for_angle.txt angle = 12.88
 % dataset 2 = csi_log_dec2-1.txt angle = 10
 % dataset 3 = csi_log_45_degrees.txt angle = 45
@@ -18,8 +18,8 @@ nSubcarriers = 52;
 
 subcarriers = [-26:-1 1:26]; % subcarrier scale on x-axis
 
-x = load('lab3_process_separate_laptop2.mat');
-
+x = load('lab3_process_separate.mat');
+y = load('our_process_separate.mat');
 % These indices put the subchannels in order from -26 to 26 (see picture on
 % my phone)
 ordered_H_packet1 = orderSubcarriers(x.csi_filtered{1}.H);
@@ -34,7 +34,7 @@ H21_2 = ordered_H_packet2(:,3);
 H11_2 = ordered_H_packet2(:,1);
 
 % Plot the magnitude. Should be a bell curve without multipath
-figure;
+figure;% 1
 plot(subcarriers, abs(H11_1));
 hold on;
 plot(subcarriers, abs(H21_1));
@@ -45,17 +45,17 @@ title('magnitude for first two packets');
 xlabel('Subcarrier');
 ylabel('Magnitude');
 
-figure;
+figure; %2
 plot(angle(H11_1));
 hold on;
 plot(angle(H21_1));
 title('Angle of two channels for the first packet');
 
-figure;
+figure; %3
 plot(unwrap(angle(H11_1)));
 title('Unwrapped angle of first channel for the first packet');
 
-figure;
+figure; %4
 plot(angle(H11_1./H21_1));
 title('Angle of ratio of two channels for the first packet');
 
@@ -64,13 +64,12 @@ title('Angle of ratio of two channels for the first packet');
 % constant across all subcarriers, showing that there are multipath/barrier
 % effects taking place (which is why we were seeing that some subcarriers
 % were getting better results than others).
-figure;
+figure; %5
 plot(angle(H21_1./H11_1));
 hold on;
 plot(angle(H21_2./H11_2));
 title('Angle of ratio of two channels for the first two packets');
 
-y = load('our_process_separate_laptop2.mat');
 y.timestamps = y.timestamps - y.timestamps(1);
 f = 5.2 * 10^9;
 c = 299792458;
@@ -97,7 +96,7 @@ for subc = 1:nSubcarriers
     phi = angle(y.hs(subc,1,:) ./ y.hs(subc,3,:));
     phi = phi + 2*k*pi;
     h=unwrap(phi); % phase change
-    theta_radians = acos((c/f) * h / (2 * pi * D));
+    theta_radians = acos(-(c/f) * h / (2 * pi * D));% need to
     thetas(subc,:) = squeeze(theta_radians)*57.2958;
     h = h(:);
     plot(y.timestamps, h); % to do time do y.timestamps , h
@@ -192,7 +191,7 @@ for packet = 1:h_size(3) % Iterate through all the packets
     for subc = 1:nSubcarriers
         h=unwrap(angle(y.hs(subc,1,packet) ./ y.hs(subc,3,packet))); 
         % Laura had an unwrap here ^ but it doesn't seem to make a difference
-        theta_radians1 = acos((c/f) * h / (2 * pi * D));
+        theta_radians1 = acos(-(c/f) * h / (2 * pi * D));
         thetas(subc, packet) = theta_radians1 * 57.2958;
         if thetas(subc, packet) < minTheta
             minTheta = thetas(subc, packet);
