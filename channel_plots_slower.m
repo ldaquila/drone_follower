@@ -175,21 +175,133 @@ ylabel('Theta (Degrees)');
 legend('Each line represents a subcarrier');
 
 
-% Colleen's attempt to unwrap using the resolution
-% Integration: Compute delta theta
-all_delta_thetas_rad = zeros(nSubcarriers,nPackets-1);
 resolution = pi/7.63; % in rad
 
-for packet = 1:nPackets-1 % Iterate through all the packets and compare to the next successive one
+
+% find best subcarrier = subcarrier with least residuals
+min = Inf;
+best_subc = 0;
+for subc_to_try = 1:nSubcarriers
+    diff_to_base_subc = zeros(nSubcarriers, nPackets);
     for subc = 1:nSubcarriers
-        h=angle(y.hs(subc,1,packet:packet+1) ./ y.hs(subc,3,packet:packet+1));
-        theta_radians1 = acos(-(c/f) * h(1) / (2 * pi * D));
-        theta_radians2 = acos(-(c/f) * h(2) / (2 * pi * D));
-        all_delta_thetas_rad(subc, packet) = theta_radians2 - theta_radians1;
+        % should have one row of all 0's when subc=subc_to_try
+        diff_to_base_subc(subc, :) = thetas_unwrapped(subc, :) - thetas_unwrapped(subc_to_try, :);
+    end
+    abs_diff = abs(diff_to_base_subc);
+    this_sum = nansum(abs_diff(:)); % why does this give me NaN without nansum?
+    if this_sum < min
+        min = this_sum;
+        best_subc = subc_to_try;
+    end
+
+end
+
+best_subc
+
+% compute per-packet residuals for best subcarrier
+signif_diff = zeros(nSubcarriers, nPackets);
+diff_to_best_subc = zeros(nSubcarriers, nPackets);
+for packet = 1:nPackets % Iterate through all the packets and compare to the next successive one
+    for subc = 1:nSubcarriers
+        diff_to_best_subc(subc, packet) = thetas_unwrapped(subc, packet) - thetas_unwrapped(best_subc, packet);
+        if abs(diff_to_base_subc(subc, packet)) > resolution/2
+            signif_diff(subc, packet) = diff_to_best_subc(subc, packet);
+        end
     end
 end
 
-% attempt to do our own unwrap
+figure; % 11
+for subc = 1:nSubcarriers
+    plot(y.timestamps,diff_to_best_subc(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    hold on;
+end
+title(['Difference Between Subcarriers ' dataset]);
+xlabel('Time(seconds)');
+ylabel('Residuals to Best Subcarrier');
+legend('Each line represents a subcarrier');
+
+figure; % 12
+sum_by_subc = nansum(diff_to_best_subc,2);
+abs_sub_by_subc = nansum(abs(diff_to_best_subc), 2);
+plot(subcarriers, sum_by_subc, subcarriers, abs_sub_by_subc);
+
+title(['Difference Between Subcarriers ' dataset]);
+xlabel('Subcarrier');
+ylabel('Residuals to Best Subcarrier');
+legend('Sum(Residuals)', 'Sum(Abs(Residuals))');
+
+
+figure; % 13
+for subc = 1:nSubcarriers
+    plot(y.timestamps, signif_diff(subc, :));
+    hold on;
+end
+title(['Difference Between Subcarriers greater than Resolution/2 ' dataset]);
+xlabel('Time (Seconds)');
+ylabel('Significant Differences');
+legend('Each line represents a subcarrier');
+
+
+% unwrap based on siginificant differences in subcarriers
+figure; %14
+subplot(1,2,1);
+
+for subc = 1:nSubcarriers
+    plot(y.timestamps,thetas_unwrapped(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    hold on;
+end
+
+title(['Uncorrected Theta for Data Set ' dataset]);
+xlabel('Time(seconds)');
+ylabel('Theta (Radians)');
+legend('Each line represents a subcarrier');
+
+for packet = 1:nPackets 
+    for subc = 1:nSubcarriers
+        if signif_diff(subc, packet) < 0
+            thetas_unwrapped(subc, packet) = thetas_unwrapped(subc, packet)+ resolution;
+        end
+        if signif_diff(subc, packet) > 0
+            thetas_unwrapped(subc, packet) = thetas_unwrapped(subc, packet)- resolution;
+        end
+    end
+end
+
+subplot(1,2,2);
+for subc = 1:nSubcarriers
+    plot(y.timestamps,thetas_unwrapped(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    hold on;
+end
+
+title(['Theta Unwrapped by Diff to Subcarrier for Data Set ' dataset]);
+xlabel('Time(seconds)');
+ylabel('Theta (Radians)');
+legend('Each line represents a subcarrier');
+
+
+
+% unwrap based on siginificant differences in packets
+% Compute delta thetas between successive packets
+all_delta_thetas_rad = zeros(nSubcarriers,nPackets-1);
+for packet = 1:nPackets-1 % Iterate through all the packets and compare to the next successive one
+    for subc = 1:nSubcarriers
+         all_delta_thetas_rad(subc, packet) = thetas_unwrapped(subc, packet+1) - thetas_unwrapped(subc, packet);
+    end
+end
+
+figure; %14
+subplot(1,2,1);
+for subc = 1:nSubcarriers
+    plot(y.timestamps,thetas_unwrapped(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    hold on;
+end
+
+title(['Theta Unwrapped by Diff to Subcarrier ' dataset]);
+xlabel('Time(seconds)');
+ylabel('Theta (Radians)');
+legend('Each line represents a subcarrier');
+
+% attempt to do our own unwrap based on successive packets
 threshold = 5/57.2958;
 subcs_packets_todrop = zeros(size(thetas_unwrapped)-[0,1]); % put a 1 in if we want to drop that entry
 for packet = 2:nPackets-2 % Iterate through all the packets and compare to the next successive one
@@ -221,50 +333,31 @@ for packet = 2:nPackets-2 % Iterate through all the packets and compare to the n
     end 
 end
 
-figure; % 11
-diff_to_base_subc = zeros(nSubcarriers, nPackets);
-signif_diff = zeros(nSubcarriers, nPackets);
-for packet = 1:nPackets % Iterate through all the packets and compare to the next successive one
-    for subc = 1:nSubcarriers
-        diff_to_base_subc(subc, packet) = thetas_unwrapped(subc, packet) - thetas_unwrapped(1, packet);
-        if abs(diff_to_base_subc(subc, packet)) > resolution/2
-            signif_diff(subc, packet) = diff_to_base_subc(subc, packet);
-        end
-    end
-end
-
-for packet = 1:nPackets % Iterate through all the packets and compare to the next successive one
-    for subc = 1:nSubcarriers
-        if signif_diff(subc, packet) < 0
-            thetas_unwrapped(subc, packet) = thetas_unwrapped(subc, packet)+ resolution;
-        end
-        if signif_diff(subc, packet) > 0
-            thetas_unwrapped(subc, packet) = thetas_unwrapped(subc, packet)- resolution;
-        end
-    end
-end
-
-
-bad_subc = [];
-off_subcarriers = 0;
-for packet = 1:10 % Iterate through all the packets and compare to the next successive one
-    for subc = 1:nSubcarriers
-        if abs(diff_to_base_subc(subc, packet)) > 0.4 % rad
-            off_subcarriers = off_subcarriers +1;
-            bad_subc = [bad_subc subc];
-        end
-    end
-end
-
-
+subplot(1,2,2);
 for subc = 1:nSubcarriers
-    plot(y.timestamps,diff_to_base_subc(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    plot(y.timestamps,thetas_unwrapped(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
     hold on;
 end
-title(['Difference Between Subcarriers ' dataset]);
+
+title(['Theta Unwrapped by Diff between Packets ' dataset]);
 xlabel('Time(seconds)');
 ylabel('Theta (Radians)');
 legend('Each line represents a subcarrier');
+
+% unwrapping by diff between packets seems to just adds noise
+
+
+% bad_subc = [];
+% for packet = 1:10 % Iterate through all the packets and compare to the next successive one
+%     for subc = 1:nSubcarriers
+%         if abs(diff_to_best_subc(subc, packet)) > 0.4 % rad
+%             bad_subc = [bad_subc subc];
+%         end
+%     end
+% end
+
+
+
 
 figure; %12
 subplot(1,3,1);
@@ -282,7 +375,7 @@ legend('Each line represents a subcarrier');
 
 
 
-for subc = 1:52
+for subc = 1:nSubcarriers
     new_t = y.timestamps(subcs_packets_todrop(subc,:)~=1);
     new_thetas = thetas_unwrapped(subc,:);
     new_thetas = new_thetas(subcs_packets_todrop(subc,:)~=1);
@@ -316,9 +409,7 @@ for subc = 1:52
     
     subplot(1,3,3);
     %ylim([0 180 ]);
-    if isempty(intersect(subc, bad_subc))
-        plot(v2_t, v2_thetas);
-    end
+    plot(v2_t, v2_thetas);
     hold on;
 end
 
