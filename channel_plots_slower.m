@@ -92,9 +92,14 @@ theta_degrees = zeros(1,52);
 h_size = size(y.hs);
 nPackets = h_size(3);
 thetas = zeros(nSubcarriers,nPackets); % actual value of theta for every packet and every subcarrier
+phi_bysubc = zeros(nSubcarriers, nPackets);
+thetas_unwrapped = zeros(nSubcarriers, nPackets);
 for subc = 1:nSubcarriers
     phi = angle(y.hs(subc,1,:) ./ y.hs(subc,3,:));
+    phi_bysubc(subc, :) = angle(y.hs(subc,1,:) ./ y.hs(subc,3,:));
     phi = phi + 2*k*pi;
+    
+    thetas_unwrapped(subc, :) = acos(-(c/f) * phi_bysubc(subc, :) / (2 * pi * D));
     
     h=unwrap(phi); % phase change
     theta_radians = acos(-(c/f) * h / (2 * pi * D));% need to
@@ -138,12 +143,11 @@ figure; %8
 plot(subcarriers, integrated_theta);
 hold on;
 plot(ones(size(integrated_theta))*measured_theta);
-mean(integrated_theta)
+mean(integrated_theta);
 title('Integrated Theta');
 xlabel('Subcarrier');
 ylabel('Theta (Degrees)');
 
-%theta_degrees = abs(theta_degrees);
 figure; %9
 plot(subcarriers,real(theta_degrees),'*');
 hold on;
@@ -153,42 +157,18 @@ xlabel('Subcarrier');
 ylabel('Angle in Degrees');
 legend('Computed Theta', 'Theoretical Theta');
 % Print the mean of the theta measured from each of the subcarriers
-mean(theta_degrees)
+mean(theta_degrees);
 
 % Integration: Compute delta theta
 % y.hs subcarriers, channels, packets
 total_theta = 0;
-delta_thetas = zeros(1,nPackets);
-
-
-% Compute resolution  
-% nSubcarriers = 52;
-% thetas = zeros(nSubcarriers,nPackets);
-% maxTheta = 0;
-% minTheta = 360;
-
-% for packet = 1:nPackets % Iterate through all the packets 
-%     for subc = 1:nSubcarriers
-%         phi = angle(y.hs(subc,1,packet) ./ y.hs(subc,3,packet));
-%         phi = phi + 2*k*pi;
-%         h=unwrap(phi); % phase change
-%         theta_radians = acos(-(c/f) * h / (2 * pi * D));% need to
-%         thetas(subc,packet) = squeeze(theta_radians)*57.2958;
-%         if thetas(subc, packet) < minTheta
-%             minTheta = thetas(subc, packet);
-%         end
-%         if thetas(subc, packet) > maxTheta
-%             maxTheta = thetas(subc, packet);
-%         end
-%     end
-% end
 
 figure; %10
 for subc = 1:nSubcarriers
     plot(y.timestamps, thetas(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
     hold on;
 end
-resolution = 23; % in degrees
+
 title(['Per-Packet Theta for Data Set ' dataset]);
 xlabel('Time (Seconds)');
 ylabel('Theta (Degrees)');
@@ -197,44 +177,42 @@ legend('Each line represents a subcarrier');
 
 % Colleen's attempt to unwrap using the resolution
 % Integration: Compute delta theta
-total_theta = zeros(1,nSubcarriers);
-all_delta_thetas = zeros(nSubcarriers,nPackets-1);
-
+all_delta_thetas_rad = zeros(nSubcarriers,nPackets-1);
+resolution = pi/7.63; % in rad
 
 for packet = 1:nPackets-1 % Iterate through all the packets and compare to the next successive one
     for subc = 1:nSubcarriers
         h=angle(y.hs(subc,1,packet:packet+1) ./ y.hs(subc,3,packet:packet+1));
         theta_radians1 = acos(-(c/f) * h(1) / (2 * pi * D));
         theta_radians2 = acos(-(c/f) * h(2) / (2 * pi * D));
-        all_delta_thetas(subc, packet) = (theta_radians2 - theta_radians1) * 57.2958;
+        all_delta_thetas_rad(subc, packet) = theta_radians2 - theta_radians1;
     end
 end
 
 % attempt to do our own unwrap
-countunder = 0;
-threshold = 5;
-subcs_packets_todrop = zeros(size(thetas)-[0,1]); % put a 1 in if we want to drop that entry
+threshold = 5/57.2958;
+subcs_packets_todrop = zeros(size(thetas_unwrapped)-[0,1]); % put a 1 in if we want to drop that entry
 for packet = 2:nPackets-2 % Iterate through all the packets and compare to the next successive one
     for subc = 1:nSubcarriers
-        if all_delta_thetas(subc, packet) > threshold 
+        if all_delta_thetas_rad(subc, packet) > threshold 
             % see if this is a trend or just one weird packet
-            previous_packet_theta = thetas(subc, packet-1);
-            next_packet_theta = thetas(subc, packet+1);
+            previous_packet_theta = thetas_unwrapped(subc, packet-1);
+            next_packet_theta = thetas_unwrapped(subc, packet+1);
             delta = next_packet_theta - previous_packet_theta;
-            if delta > resolution % this is a trend, unwrap
-                thetas(subc, packet) = thetas(subc, packet) - resolution;
+            if delta > resolution/2 % this is a trend, unwrap
+                thetas_unwrapped(subc, packet) = thetas_unwrapped(subc, packet) - resolution;
             else % one weird packet, drop it
                 %remove this subc, packet entry from thetas
                 subcs_packets_todrop(subc, packet) = 1;
             end
         end
-        if all_delta_thetas(subc, packet) < -threshold
+        if all_delta_thetas_rad(subc, packet) < -threshold
             % see if this is a trend or just one weird packet
-            previous_packet_theta = thetas(subc, packet-1);
-            next_packet_theta = thetas(subc, packet+1);
+            previous_packet_theta = thetas_unwrapped(subc, packet-1);
+            next_packet_theta = thetas_unwrapped(subc, packet+1);
             delta = next_packet_theta - previous_packet_theta;
-            if delta < -resolution % this is a trend, unwrap
-                thetas(subc, packet) = thetas(subc, packet) + resolution;
+            if delta < -resolution/2 % this is a trend, unwrap
+                thetas_unwrapped(subc, packet) = thetas_unwrapped(subc, packet) + resolution;
             else % one weird packet, drop
                 %remove this subc, packet entry from thetas
                 subcs_packets_todrop(subc, packet) = 1;
@@ -243,52 +221,106 @@ for packet = 2:nPackets-2 % Iterate through all the packets and compare to the n
     end 
 end
 
+figure; % 11
+diff_to_base_subc = zeros(nSubcarriers, nPackets);
+signif_diff = zeros(nSubcarriers, nPackets);
+for packet = 1:nPackets % Iterate through all the packets and compare to the next successive one
+    for subc = 1:nSubcarriers
+        diff_to_base_subc(subc, packet) = thetas_unwrapped(subc, packet) - thetas_unwrapped(1, packet);
+        if abs(diff_to_base_subc(subc, packet)) > resolution/2
+            signif_diff(subc, packet) = diff_to_base_subc(subc, packet);
+        end
+    end
+end
 
-figure; %11
-subplot(1,3,1);
-text(.75, 1.25, ['Threshold ' num2str(threshold) ' Degrees']);
+for packet = 1:nPackets % Iterate through all the packets and compare to the next successive one
+    for subc = 1:nSubcarriers
+        if signif_diff(subc, packet) < 0
+            thetas_unwrapped(subc, packet) = thetas_unwrapped(subc, packet)+ resolution;
+        end
+        if signif_diff(subc, packet) > 0
+            thetas_unwrapped(subc, packet) = thetas_unwrapped(subc, packet)- resolution;
+        end
+    end
+end
+
+
+bad_subc = [];
+off_subcarriers = 0;
+for packet = 1:10 % Iterate through all the packets and compare to the next successive one
+    for subc = 1:nSubcarriers
+        if abs(diff_to_base_subc(subc, packet)) > 0.4 % rad
+            off_subcarriers = off_subcarriers +1;
+            bad_subc = [bad_subc subc];
+        end
+    end
+end
+
 
 for subc = 1:nSubcarriers
-    plot(y.timestamps,thetas(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    plot(y.timestamps,diff_to_base_subc(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    hold on;
+end
+title(['Difference Between Subcarriers ' dataset]);
+xlabel('Time(seconds)');
+ylabel('Theta (Radians)');
+legend('Each line represents a subcarrier');
+
+figure; %12
+subplot(1,3,1);
+
+for subc = 1:nSubcarriers
+    plot(y.timestamps,thetas_unwrapped(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
     hold on;
 end
 
 title(['Uncorrected Theta for Data Set ' dataset]);
 xlabel('Time(seconds)');
-ylabel('Theta (Degrees)');
+ylabel('Theta (Radians)');
 legend('Each line represents a subcarrier');
 
 
 
-for subc = 1:nSubcarriers
+
+for subc = 1:52
     new_t = y.timestamps(subcs_packets_todrop(subc,:)~=1);
-    new_thetas = thetas(subc,:);
+    new_thetas = thetas_unwrapped(subc,:);
     new_thetas = new_thetas(subcs_packets_todrop(subc,:)~=1);
     
     subplot(1,3,2);
     plot(new_t, new_thetas); %plot(thetas(subc,1:50)); plots for 50 packets
     hold on;
     
-    new_delta_theta = [];
-    new_packets_todrop = [];
-    for packet = 1:length(new_t)-1
-        new_delta_theta(packet) = new_thetas(packet+1) - new_thetas(packet);
-        if new_delta_theta(packet) > threshold || new_delta_theta(packet) < -threshold
-            new_packets_todrop(packet) = 1;
+    new_packets_todrop = zeros(size(new_thetas));
+    for packet = 2:length(new_t)-1
+        delta = new_thetas(packet) - new_thetas(packet-1);
+        if delta > threshold
+            if delta > resolution/2 % this is a trend, unwrap
+                new_thetas(packet) = new_thetas(packet) - resolution;
+            else % one weird packet, drop
+                %remove this subc, packet entry from thetas
+                new_packets_todrop(packet) = 1;
+            end
+        end
+        if delta < -threshold
+            if delta < -resolution/2 % this is a trend, unwrap
+                new_thetas(packet) = new_thetas(packet) + resolution;
+            else % one weird packet, drop
+                %remove this subc, packet entry from thetas
+                new_packets_todrop(packet) = 1;
+            end
         end
     end
-    min(new_delta_theta)
     v2_t = new_t(new_packets_todrop(:)~=1);
     v2_thetas = new_thetas(new_packets_todrop(:)~=1);
     
     subplot(1,3,3);
-    ylim([0 180 ]);
-    plot(v2_t, v2_thetas);
+    %ylim([0 180 ]);
+    if isempty(intersect(subc, bad_subc))
+        plot(v2_t, v2_thetas);
+    end
     hold on;
 end
 
 title(['Corrected Per-Packet Per Subcarrier Theta for Data Set ' dataset]);
 xlabel('Time (Seconds)');
-
-
-
