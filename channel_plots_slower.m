@@ -2,7 +2,7 @@
 close all;
 
 measured_theta = 12.88; % The theta that was physically measured
-dataset = '14';
+dataset = '1';
 start_angle_degrees = 90;
 % dataset 1 = csi_log_for_angle.txt angle = 12.88
 % dataset 2 = csi_log_dec2-1.txt angle = 10
@@ -18,8 +18,8 @@ nSubcarriers = 52;
 
 subcarriers = [-26:-1 1:26]; % subcarrier scale on x-axis
 
-x = load('lab3_process_separate.mat');
-y = load('our_process_separate.mat');
+x = load('lab3_process_separate_for_angle.mat');
+y = load('our_process_separate_for_angle.mat');
 % These indices put the subchannels in order from -26 to 26 (see picture on
 % my phone)
 ordered_H_packet1 = orderSubcarriers(x.csi_filtered{1}.H);
@@ -180,24 +180,7 @@ resolution = pi/7.63; % in rad
 
 
 % find best subcarrier = subcarrier with least residuals
-min = Inf;
-best_subc = 0;
-for subc_to_try = 1:nSubcarriers
-    diff_to_base_subc = zeros(nSubcarriers, nPackets);
-    for subc = 1:nSubcarriers
-        % should have one row of all 0's when subc=subc_to_try
-        diff_to_base_subc(subc, :) = thetas_unwrapped(subc, :) - thetas_unwrapped(subc_to_try, :);
-    end
-    abs_diff = abs(diff_to_base_subc);
-    this_sum = nansum(abs_diff(:)); % why does this give me NaN without nansum?
-    if this_sum < min
-        min = this_sum;
-        best_subc = subc_to_try;
-    end
-
-end
-
-best_subc
+best_subc = findbestsubc(nSubcarriers, nPackets, thetas_unwrapped);
 
 % compute per-packet residuals for best subcarrier
 signif_diff = zeros(nSubcarriers, nPackets);
@@ -371,6 +354,8 @@ xlabel('Time(seconds)');
 ylabel('Theta (Radians)');
 legend('Each line represents a subcarrier');
 
+v2_all_times = Inf(nSubcarriers, nPackets);
+v2_all_thetas = Inf(nSubcarriers, nPackets);
 
 for subc = 1:nSubcarriers
     new_t = y.timestamps(subcs_packets_todrop(subc,:)~=1);
@@ -402,14 +387,63 @@ for subc = 1:nSubcarriers
             end
         end
     end
+    temp = new_t(new_packets_todrop(:)~=1);
+    v2_all_times(subc, 1:size(temp, 2)) = temp;
+    
+    temp2 = new_thetas(new_packets_todrop(:)~=1);
+    v2_all_thetas(subc, 1:size(temp2, 2)) = temp2;
+    
     v2_t = new_t(new_packets_todrop(:)~=1);
     v2_thetas = new_thetas(new_packets_todrop(:)~=1);
     
     subplot(1,3,3);
-    %ylim([0 180 ]);
     plot(v2_t, v2_thetas);
     hold on;
 end
 
 title(['Corrected Per-Packet Per Subcarrier Theta for Data Set ' dataset]);
+xlabel('Time (Seconds)');
+
+%3rd iteration of dropping / unwrapping
+figure; %17
+for subc = 1:nSubcarriers
+    temp = v2_all_times(subc);
+    v2_t = temp(temp~=Inf);
+    temp2 = v2_all_thetas(subc);
+    v2_thetas = temp2(temp2~=Inf);
+    
+    subplot(1,2,1);
+    title(['V2 Dropping Packets: Data Set ' dataset]);
+    plot(v2_t, v2_thetas); 
+    hold on;
+    
+    new_packets_todrop = zeros(size(v2_thetas));
+    for packet = 2:length(v2_t)-1
+        delta = v2_thetas(packet) - v2_thetas(packet-1);
+        if delta > threshold
+            if delta > resolution/2 % this is a trend, unwrap
+                v2_thetas(packet) = v2_thetas(packet) - resolution;
+            else % one weird packet, drop
+                %remove this subc, packet entry from thetas
+                new_packets_todrop(packet) = 1;
+            end
+        end
+        if delta < -threshold
+            if delta < -resolution/2 % this is a trend, unwrap
+                v2_thetas(packet) = v2_thetas(packet) + resolution;
+            else % one weird packet, drop
+                %remove this subc, packet entry from thetas
+                new_packets_todrop(packet) = 1;
+            end
+        end
+    end
+    v3_t = v2_t(new_packets_todrop(:)~=1);
+    v3_thetas = v2_thetas(new_packets_todrop(:)~=1);
+    
+    subplot(1,2,2);
+    plot(v3_t, v3_thetas);
+    hold on;
+end
+
+title(['v3 Theta for Data Set ' dataset]);
 xlabel('Time (Seconds)');
