@@ -98,7 +98,8 @@ for subc = 1:nSubcarriers
     phi = angle(y.hs(subc,1,:) ./ y.hs(subc,3,:));
     phi_bysubc(subc, :) = angle(y.hs(subc,1,:) ./ y.hs(subc,3,:));
     phi = phi + 2*k*pi;
-    
+    % phi_bysubc(subc, :) = phi_bysubc(subc, :) + 2*k*pi; % this doesn't
+    % seem to make a difference for the later parts
     thetas_unwrapped(subc, :) = acos(-(c/f) * phi_bysubc(subc, :) / (2 * pi * D));
     
     h=unwrap(phi); % phase change
@@ -289,7 +290,7 @@ for packet = 1:nPackets-1 % Iterate through all the packets and compare to the n
     end
 end
 
-figure; %14
+figure; %15
 subplot(1,2,1);
 for subc = 1:nSubcarriers
     plot(y.timestamps,thetas_unwrapped(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
@@ -357,22 +358,18 @@ legend('Each line represents a subcarrier');
 % end
 
 
-
-
-figure; %12
+figure; %16
 subplot(1,3,1);
 
 for subc = 1:nSubcarriers
-    plot(y.timestamps,thetas_unwrapped(subc,:)); %plot(thetas(subc,1:50)); plots for 50 packets
+    plot(y.timestamps,thetas_unwrapped(subc,:)); 
     hold on;
 end
 
-title(['Uncorrected Theta for Data Set ' dataset]);
+title(['Thetas Unwrapped by Subc and Packet for Data Set ' dataset]);
 xlabel('Time(seconds)');
 ylabel('Theta (Radians)');
 legend('Each line represents a subcarrier');
-
-
 
 
 for subc = 1:nSubcarriers
@@ -381,7 +378,8 @@ for subc = 1:nSubcarriers
     new_thetas = new_thetas(subcs_packets_todrop(subc,:)~=1);
     
     subplot(1,3,2);
-    plot(new_t, new_thetas); %plot(thetas(subc,1:50)); plots for 50 packets
+    title(['After Dropping Packets: Data Set ' dataset]);
+    plot(new_t, new_thetas); 
     hold on;
     
     new_packets_todrop = zeros(size(new_thetas));
