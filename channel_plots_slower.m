@@ -2,7 +2,7 @@
 close all;
 
 measured_theta = 12.88; % The theta that was physically measured
-dataset = '1';
+dataset = '14';
 start_angle_degrees = 90;
 % dataset 1 = csi_log_for_angle.txt angle = 12.88
 % dataset 2 = csi_log_dec2-1.txt angle = 10
@@ -18,8 +18,8 @@ nSubcarriers = 52;
 
 subcarriers = [-26:-1 1:26]; % subcarrier scale on x-axis
 
-x = load('lab3_process_separate_for_angle.mat');
-y = load('our_process_separate_for_angle.mat');
+x = load('lab3_process_separate.mat');
+y = load('our_process_separate.mat');
 % These indices put the subchannels in order from -26 to 26 (see picture on
 % my phone)
 ordered_H_packet1 = orderSubcarriers(x.csi_filtered{1}.H);
@@ -188,7 +188,7 @@ diff_to_best_subc = zeros(nSubcarriers, nPackets);
 for packet = 1:nPackets % Iterate through all the packets and compare to the next successive one
     for subc = 1:nSubcarriers
         diff_to_best_subc(subc, packet) = thetas_unwrapped(subc, packet) - thetas_unwrapped(best_subc, packet);
-        if abs(diff_to_base_subc(subc, packet)) > resolution/2
+        if abs(diff_to_best_subc(subc, packet)) > resolution/2
             signif_diff(subc, packet) = diff_to_best_subc(subc, packet);
         end
     end
@@ -262,8 +262,6 @@ xlabel('Time(seconds)');
 ylabel('Theta (Radians)');
 legend('Each line represents a subcarrier');
 
-
-
 % unwrap based on siginificant differences in packets
 % Compute delta thetas between successive packets
 all_delta_thetas_rad = zeros(nSubcarriers,nPackets-1);
@@ -331,16 +329,6 @@ legend('Each line represents a subcarrier');
 % unwrapping by diff between packets seems to just adds noise
 
 
-% bad_subc = [];
-% for packet = 1:10 % Iterate through all the packets and compare to the next successive one
-%     for subc = 1:nSubcarriers
-%         if abs(diff_to_best_subc(subc, packet)) > 0.4 % rad
-%             bad_subc = [bad_subc subc];
-%         end
-%     end
-% end
-
-
 figure; %16
 subplot(1,3,1);
 
@@ -387,14 +375,12 @@ for subc = 1:nSubcarriers
             end
         end
     end
-    temp = new_t(new_packets_todrop(:)~=1);
-    v2_all_times(subc, 1:size(temp, 2)) = temp;
-    
-    temp2 = new_thetas(new_packets_todrop(:)~=1);
-    v2_all_thetas(subc, 1:size(temp2, 2)) = temp2;
-    
     v2_t = new_t(new_packets_todrop(:)~=1);
     v2_thetas = new_thetas(new_packets_todrop(:)~=1);
+    
+    
+    v2_all_times(subc, 1:size(v2_t, 2)) = v2_t;
+    v2_all_thetas(subc, 1:size(v2_thetas, 2)) = v2_thetas;
     
     subplot(1,3,3);
     plot(v2_t, v2_thetas);
@@ -403,47 +389,27 @@ end
 
 title(['Corrected Per-Packet Per Subcarrier Theta for Data Set ' dataset]);
 xlabel('Time (Seconds)');
+[v3_all_times, v3_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v2_all_times, v2_all_thetas, 4);
+[v31_all_times, v31_all_thetas] = unwraptosubc(dataset, best_subc, nSubcarriers, resolution, v3_all_times, v3_all_thetas);
+[v4_all_times, v4_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v31_all_times, v31_all_thetas, 4);
+[v41_all_times, v41_all_thetas] = unwraptosubc(dataset, best_subc, nSubcarriers, resolution, v4_all_times, v4_all_thetas);
+[v5_all_times, v5_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v41_all_times, v41_all_thetas, 5);
+[v51_all_times, v51_all_thetas] = unwraptosubc(dataset, best_subc, nSubcarriers, resolution, v5_all_times, v5_all_thetas);
+[v6_all_times, v6_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v51_all_times, v51_all_thetas, 6);
+[v61_all_times, v61_all_thetas] = unwraptosubc(dataset, best_subc, nSubcarriers, resolution, v6_all_times, v6_all_thetas);
+[v7_all_times, v7_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v61_all_times, v61_all_thetas, 7);
+[v71_all_times, v71_all_thetas] = unwraptosubc(dataset, best_subc, nSubcarriers, resolution, v7_all_times, v7_all_thetas);
+[v8_all_times, v8_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v71_all_times, v71_all_thetas, 8);
+[v81_all_times, v81_all_thetas] = unwraptosubc(dataset, best_subc, nSubcarriers, resolution, v8_all_times, v8_all_thetas);
+[v9_all_times, v9_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v81_all_times, v81_all_thetas, 9);
+[v91_all_times, v91_all_thetas] = unwraptosubc(dataset, best_subc, nSubcarriers, resolution, v9_all_times, v9_all_thetas);
+[v10_all_times, v10_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v91_all_times, v91_all_thetas, 10);
 
-%3rd iteration of dropping / unwrapping
-figure; %17
-for subc = 1:nSubcarriers
-    temp = v2_all_times(subc);
-    v2_t = temp(temp~=Inf);
-    temp2 = v2_all_thetas(subc);
-    v2_thetas = temp2(temp2~=Inf);
-    
-    subplot(1,2,1);
-    title(['V2 Dropping Packets: Data Set ' dataset]);
-    plot(v2_t, v2_thetas); 
-    hold on;
-    
-    new_packets_todrop = zeros(size(v2_thetas));
-    for packet = 2:length(v2_t)-1
-        delta = v2_thetas(packet) - v2_thetas(packet-1);
-        if delta > threshold
-            if delta > resolution/2 % this is a trend, unwrap
-                v2_thetas(packet) = v2_thetas(packet) - resolution;
-            else % one weird packet, drop
-                %remove this subc, packet entry from thetas
-                new_packets_todrop(packet) = 1;
-            end
-        end
-        if delta < -threshold
-            if delta < -resolution/2 % this is a trend, unwrap
-                v2_thetas(packet) = v2_thetas(packet) + resolution;
-            else % one weird packet, drop
-                %remove this subc, packet entry from thetas
-                new_packets_todrop(packet) = 1;
-            end
-        end
-    end
-    v3_t = v2_t(new_packets_todrop(:)~=1);
-    v3_thetas = v2_thetas(new_packets_todrop(:)~=1);
-    
-    subplot(1,2,2);
-    plot(v3_t, v3_thetas);
-    hold on;
-end
-
-title(['v3 Theta for Data Set ' dataset]);
-xlabel('Time (Seconds)');
+% [v3_all_times, v3_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v2_all_times, v2_all_thetas, 4);
+% [v4_all_times, v4_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v3_all_times, v3_all_thetas, 4);
+% [v5_all_times, v5_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v4_all_times, v4_all_thetas, 5);
+% [v6_all_times, v6_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v5_all_times, v5_all_thetas, 6);
+% [v7_all_times, v7_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v6_all_times, v6_all_thetas, 7);
+% [v8_all_times, v8_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v7_all_times, v7_all_thetas, 8);
+% [v9_all_times, v9_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v8_all_times, v8_all_thetas, 9);
+% [v10_all_times, v10_all_thetas] = iterate(dataset, threshold, resolution, nSubcarriers, nPackets, v9_all_times, v9_all_thetas, 10);

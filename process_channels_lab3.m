@@ -6,8 +6,10 @@ function [h,t,mac]=process_channels_lab3(fn, MAC_ADDR)
     mac = cell(length(csi),1);
     
     % Add a space
-    MAC_ADDR = [' ' MAC_ADDR];
+    MAC_ADDR = [' ' MAC_ADDR]
     csi_filtered = {};
+    csi{2}.src
+    strcmp(csi{2}.src, MAC_ADDR)
     for i=1:length(csi)
             sub =-26:25;
             if ~isempty(csi{i}) && strcmp(csi{i}.src, MAC_ADDR)
